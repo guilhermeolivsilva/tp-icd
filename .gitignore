@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Datasets brutos
+datasets/dic_ibge.csv
+datasets/simet_veloc-2020-12-17-13-00
