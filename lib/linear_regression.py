@@ -1,7 +1,4 @@
 
-import math
-import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -68,7 +65,7 @@ def get_histogram(df, mode):
         vline_labels=['PIB per capita médio', 'PIB per capita mediano']
         xlabel='PIB per capita'
 
-    elif mode == 'bootstrap_ef1_gdp':
+    elif mode == 'bootstrap_ef_1_gdp':
         keys=['pib_per_capita', 'tx_aprov_ef_1']
         title=('Bootstrap da diferença na taxa de aprovação no Ensino '
                 'Fundamental I entre municípios ricos e pobres')
@@ -91,7 +88,7 @@ def get_histogram(df, mode):
                       'Número de dispositivos/habitante mediano']
         xlabel='Número de dispositivos por habitante'
 
-    elif mode == 'bootstrap_ef1_internet_connection':
+    elif mode == 'bootstrap_ef_1_internet_connection':
         keys=['acima_10_mbs', 'tx_aprov_ef_1']
         title=('Bootstrap da diferença na taxa de aprovação no Ensino '
                 'Fundamental I entre municípios com bom e fraco acesso à Internet')
@@ -151,7 +148,7 @@ def _get_var_bootstrap_histogram(df, keys, title):
     plt.show()
 
 def get_univariate_regression(df, mode):
-    if mode == 'ef1_internet':
+    if mode == 'ef_1_internet':
         endog = df['tx_aprov_ef_1']
     
     elif mode == 'ef2_internet':
@@ -171,7 +168,7 @@ def get_univariate_regression_plot(df, mode):
 
     if 'reg' in mode:        
         education_level = {
-            'ef1_reg': 'Ensino Fundamental I',
+            'ef_1_reg': 'Ensino Fundamental I',
             'ef2_reg': 'Ensino Fundamental II',
             'reg_reg': 'Ensino Médio'
         }[mode]
@@ -238,4 +235,171 @@ def _get_regression_resid_plot(df, x, y, title, xlabel, ylabel):
     plt.ylabel(ylabel)
     plt.show()
 
-#### Continuar da seção multivariada (2.2)
+def get_train_test_validation(df):
+    df = shuffle(df, random_state=3647).reset_index(drop=True)
+
+    training_sample_range = round(len(df.index) * 0.8)
+    validation_sample_range = round(len(df.index) * 0.9)
+
+    df_train = df.loc[
+        0:training_sample_range
+    ].reset_index(drop=True)
+    df_train = _get_additional_columns(df_train)
+    df_train = _get_regional_dummies(df_train)
+    
+    df_validation = df.loc[
+        training_sample_range:validation_sample_range
+    ].reset_index(drop=True)
+    df_validation = _get_regional_dummies(df_validation)
+
+    df_test = df.loc[
+        validation_sample_range:len(df.index)
+    ].reset_index(drop=True)
+
+    return df_train, df_validation, df_test
+
+def _get_additional_columns(df):
+    df['0_a_2_mbs_squared'] = df['0_a_2_mbs']**2
+    df['0_a_2_mbs_*_num_operadoras'] = df['0_a_2_mbs'] * df['num_operadoras']
+    return df
+
+def _get_regional_dummies(df):
+    regional_dummies = pd.get_dummies(df['regiao'])
+    df['Centro-Oeste'] = regional_dummies['CENTRO-OESTE']
+    df['Nordeste'] = regional_dummies['NORDESTE']
+    df['Norte'] = regional_dummies['NORTE']
+    df['Sudeste'] = regional_dummies['SUDESTE']
+    df['Sul'] = regional_dummies['SUL']
+
+    return df
+
+def get_multivariate_regression(df, model, education_level):
+    approval_model, ideb_model, saeb_mat_model, saeb_port_model = _get_multivariate_regression_models(df, model, education_level)
+
+    print(approval_model.summary())
+    print(ideb_model.summary())
+    print(saeb_mat_model.summary())
+    print(saeb_port_model.summary())
+
+
+def _get_multivariate_regression_models(df, model, education_level):
+    exog = _get_multivariate_regression_columns(df, model)
+    
+    approval_model_endog = df['tx_aprov_' + education_level]
+    approval_model = sm.OLS(
+        endog=approval_model_endog,
+        exog=exog,
+        missing='drop'
+    ).fit()
+
+    ideb_model_endog = df['ideb_ef_' + education_level]
+    ideb_model = sm.OLS(
+        endog=ideb_model_endog,
+        exog=exog,
+        missing='drop'
+    ).fit()
+
+    saeb_mat_model_endog = df['saeb_mat_' + education_level]
+    saeb_mat_model = sm.OLS(
+        endog=saeb_mat_model_endog,
+        exog=exog,
+        missing='drop'
+    ).fit()
+
+    saeb_port_model_endog = df['saeb_port_' + education_level]
+    saeb_port_model = sm.OLS(
+        endog=saeb_port_model_endog,
+        exog=exog,
+        missing='drop'
+    ).fit()
+
+    return approval_model, ideb_model, saeb_mat_model, saeb_port_model
+
+def _get_multivariate_regression_columns(df, model):
+    df['intercepto'] = 1
+    common_variables = [
+        'intercepto',
+        'num_operadoras',
+        'exp_vida',
+        'analfabetismo',
+        'tx_pobreza', 
+        'pib_per_capita',
+        'mortalidade_inf',
+        'maternidade_inf',
+        'Centro-Oeste',
+        'Nordeste',
+        'Norte',
+        'Sul',
+        'Sudeste'
+    ]
+    
+    if model == 'main':
+        exp_variables = common_variables + [
+            '0_a_2_mbs'
+        ]
+
+    elif model == 'interact':
+        exp_variables = common_variables + [
+            '0_a_2_mbs',
+            '0_a_2_mbs_*_num_operadoras'
+        ]
+
+    elif model == 'non_linear':
+        exp_variables = common_variables + [
+            '0_a_2_mbs',
+            '0_a_2_mbs_squared'
+        ]
+
+    elif model == 'all_speed_ranges':
+        exp_variables = common_variables + [
+            '0_a_2_mbs',
+            '2.5_a_5_mbs',
+            '6_a_10_mbs',
+            '11_a_15_mbs',
+            '15_a_25_mbs',
+            'acima_25_mbs'
+        ]
+
+    elif model == 'dual_speed_ranges':
+        exp_variables = common_variables + [
+            '0_a_10_mbs',
+            'acima_10_mbs'
+        ]
+    
+    return df[exp_variables]
+
+def get_forecast_plot(df_train, df_validation, education_level):
+    title = 'Valores observados e preditos da taxa de aprovação no ' + {
+        'ef_1': 'Ensino Fundamental I',
+        'ef_2': 'Ensino Fundamental II',
+        'em': 'Ensino Médio'
+    }[education_level]
+
+    y_pred, y_real = _get_forecast_analysis(
+        df_train=df_train,
+        df_validation=df_validation,
+        education_level=education_level
+    )
+
+    plt.scatter(y_pred, y_real)
+    plt.title(title)
+    plt.xlabel('Valor predito')
+    plt.ylabel('Valor observado')
+    plt.show()
+
+def _get_forecast_analysis(df_train, df_validation, education_level):
+    df_validation = _get_multivariate_regression_columns(
+        df=df_validation,
+        model='dual_speed_ranges'
+    )
+
+    approval_model = _get_multivariate_regression_models(
+        df=df_train,
+        model='dual_speed_ranges',
+        education_level=education_level
+    )[0]
+
+    y_pred = approval_model.predict(df_validation)
+    y_real = df_validation['tx_aprov_' + education_level][df_validation.index]
+
+    return y_pred, y_real

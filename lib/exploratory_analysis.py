@@ -459,7 +459,7 @@ def get_internet_education_corr(df):
     
     display(df[cols_corr].corr())
 
-    pairplot = sns.pairplot(
+    sns.pairplot(
         df[cols_corr],
         diag_kws={'edgecolor':'k'},
         plot_kws={'alpha':0.5, 'edgecolor':'k'}
