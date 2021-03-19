@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_working_dataset(raw_datasets_path):
+def get_working_dataset(raw_datasets_path='datasets/raw/'):
     # Geography
     ibge_dataset = get_ibge_dataset(raw_datasets_path)
     
@@ -25,16 +25,20 @@ def get_working_dataset(raw_datasets_path):
                           .merge(social_dataset, on=['nom_mun', 'sig_uf'], how='inner')\
                           .merge(internet_connection_dataset, on=['cod_mun', 'nom_mun', 'sig_uf', 'regiao'], how='inner')
 
+    cols_to_normalize = [x for x in df.columns.tolist() if 'mbs' in x]
+    for col in cols_to_normalize:
+        df[col] = df[col] / df['populacao']
+
     df = df.reindex(columns=(
         ['cod_mun', 'nom_mun', 'sig_uf', 'regiao'] + list(
             [x for x in df.columns.tolist() if x not in ['cod_mun', 'nom_mun', 'sig_uf', 'regiao']]
         )
     ))
 
-
+    return df
 
 def get_ibge_dataset(raw_datasets_path):
-    print('Fetching and cleaning IBGE data...')
+    print('Loading and cleaning IBGE data...')
     ibge_dataset = pd.read_parquet(
         raw_datasets_path + 'dicionario_ibge.parquet'
     )
@@ -59,7 +63,7 @@ def get_region_from_uf(x):
         return 'SUL'
 
 def get_internet_dataset(raw_datasets_path, ibge_dataset):
-    print('Fetching and cleaning Internet access data...')
+    print('Loading and cleaning Internet access data...')
     internet_connection_dataset = pd.read_parquet(
         raw_datasets_path + 'internet_connection.parquet'
     )
@@ -128,16 +132,13 @@ def group_internet_data(internet_connection_dataset):
         internet_connection_grp[col] = internet_connection_grp[col].fillna(0)
         internet_connection_grp[col] = internet_connection_grp[col].astype(float)
         
-        # Normaliza contagem de dispositivos pela população
-        internet_connection_grp[col] = internet_connection_grp[col] / internet_connection_grp['populacao']
-        
     internet_connection_grp['num_operadoras'] = internet_connection_grp['num_operadoras'].fillna(0).astype(float)
 
     return internet_connection_grp
 
 
 def get_education_dataset(raw_datasets_path):
-    print('Fetching education data...')
+    print('Loading and cleaning education data...')
     ## IDEB - Ensino Fundamental I
     ideb_ef_1_dataset = pd.read_excel(
         raw_datasets_path + 'divulgacao_anos_iniciais_municipios_2019.xlsx',
@@ -160,7 +161,7 @@ def get_education_dataset(raw_datasets_path):
             'IDEB\n2019\n(N x P)': 'ideb_ef_1'
         },
         _remove_multilevel_index=True,
-        filters=(ideb_ef_1_dataset['Rede'] == 'Pública')
+        public_only=True
     )
 
     ## IDEB - Ensino Fundamental II
@@ -185,7 +186,7 @@ def get_education_dataset(raw_datasets_path):
             'IDEB\n2019\n(N x P)': 'ideb_ef_2'
         },
         _remove_multilevel_index=True,
-        filters=(ideb_ef_2_dataset['Rede'] == 'Pública')
+        public_only=True
     )
 
     ## IDEB - Ensino Medio
@@ -210,7 +211,7 @@ def get_education_dataset(raw_datasets_path):
             'IDEB\n2019\n(N x P)': 'ideb_em'
         },
         _remove_multilevel_index=True,
-        filters=(ideb_em_dataset['Rede'] == 'Pública')
+        public_only=True
     )
 
     education_dataset = ideb_ef_1_dataset.merge(ideb_ef_2_dataset, on='cod_mun', how='inner')\
@@ -240,7 +241,8 @@ def get_education_dataset(raw_datasets_path):
     return education_dataset
 
 def get_social_dataset(raw_datasets_path):
-    print('Fetching social indicators...')
+    print('Loading and cleaning social indicators...')
+    
     social_dataset = pd.read_csv(
         raw_datasets_path + 'indicadores_sociais.csv',
         sep=','
@@ -317,11 +319,11 @@ def remove_multilevel_index(df):
     return df
 
 def rename_and_drop_cols(df, cols_to_keep, rename_dict,
-                         _remove_multilevel_index=False, filters=None):
+                         _remove_multilevel_index=False, public_only=False):
     if _remove_multilevel_index:
         df = remove_multilevel_index(df)
     
-    if filters:
-        df = df[filters]
+    if public_only:
+        df = df[df['Rede'] == 'Pública']
 
     return df[cols_to_keep].rename(columns=rename_dict).reset_index(drop=True)

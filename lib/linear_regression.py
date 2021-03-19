@@ -35,7 +35,17 @@ def ab_test(df_lower_hyp, df_upper_hyp):
     else:
         return False
 
-def get_approval_rate_comparison(df, teaching_level, regions):
+def print_approval_rate_comparison(df, teaching_level):
+    regions = _get_region_labels()
+    regions.remove('Sudeste')
+    
+    for region in regions:
+        _get_approval_rate_comparison(df, teaching_level, [region, 'Sudeste'])
+
+def _get_region_labels():
+    return ['Centro-Oeste', 'Nordeste', 'Norte', 'Sudeste', 'Sul']
+
+def _get_approval_rate_comparison(df, teaching_level, regions):
     data_1 = df[df['regiao'] == regions[0].upper()][teaching_level]
     data_2 = df[df['regiao'] == regions[1].upper()][teaching_level]
 
@@ -46,16 +56,16 @@ def get_approval_rate_comparison(df, teaching_level, regions):
     else:
         x = "no ensino médio"
 
-    print(f"Existe evidência de que a taxa de aprovação {x} no {regions[1]} é"
-          f"maior do que no {regions[0]}?")
     if ab_test(data_1, data_2) == True:
-        print("Sim")
+        print(f"Existe evidência de que a taxa de aprovação {x} no {regions[1]} é "
+          f"maior do que no {regions[0]}.")
     else:
-        print("Não")
+        print(f"Não existe evidência de que a taxa de aprovação {x} no {regions[1]} é "
+          f"maior do que no {regions[0]}.")
     
-    print(f"Intervalos de confiança:\n {regions[0]}",
+    print(f"Intervalos de confiança:\n {regions[0]}\t\t",
           get_confidence_interval(data_1),
-          f"{regions[1]}", get_confidence_interval(data_2), "\n")
+          f"\n {regions[1]}\t\t", get_confidence_interval(data_2), "\n")
 
 def get_histogram(df, mode):
     # Income vs approval rate

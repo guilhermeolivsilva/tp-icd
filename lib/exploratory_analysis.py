@@ -33,7 +33,7 @@ def _get_education_cols():
     ]
 
 def _get_internet_cols(df):
-    return [x for x in df.columns.tolist() if 'mbs' in x]
+    return [x for x in df.columns.tolist() if 'mbs' in x and x not in ['0_a_10_mbs', 'acima_10_mbs']]
 
 def _get_social_cols():
     return [
@@ -163,14 +163,20 @@ def _get_education_histogram(df, key, title, xlabel, bins=None):
 
     ax[0].hist(df[key + '_ef_1'], edgecolor='black', bins=bins[0])
     ax[0].axvline(df[key + '_ef_1'].mean(), color='red', linestyle='--')
+    ax[0].axvline(df[key + '_ef_1'].median(), color='black', linestyle='--')
+    ax[0].legend(['Média', 'Mediana'])
     ax[0].set_title(u'Ensino Fundamental I')
 
     ax[1].hist(df[key + '_ef_2'], edgecolor='black', bins=bins[1])
     ax[1].axvline(df[key + '_ef_2'].mean(), color='red', linestyle='--')
+    ax[1].axvline(df[key + '_ef_2'].median(), color='black', linestyle='--')
+    ax[1].legend(['Média', 'Mediana'])
     ax[1].set_title(u'Ensino Fundamental II')
 
     ax[2].hist(df[key + '_em'], edgecolor='black', bins=bins[2])
     ax[2].axvline(df[key + '_em'].mean(), color='red', linestyle='--')
+    ax[2].axvline(df[key + '_em'].median(), color='black', linestyle='--')
+    ax[2].legend(['Média', 'Mediana'])
     ax[2].set_title(u'Ensino Médio')
     
     if type(xlabel) is list:
@@ -437,6 +443,8 @@ def _get_social_histogram(df, key, title, xlabel, ylabel=u'Frequência',
         else:
             ax.hist(df[key], edgecolor='black')
         ax.axvline(df[key].mean(), color='red', linestyle='--')
+        ax.axvline(df[key].median(), color='black', linestyle='--')
+        ax.legend(['Média', 'Mediana'])
     else:
         df.groupby('regiao').agg({
             key: agg_method
