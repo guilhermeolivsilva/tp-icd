@@ -5,21 +5,27 @@ import numpy as np
 import pandas as pd
 
 
-def get_working_dataset(raw_datasets_path='datasets/raw/'):
+def get_working_dataset(presentation=True, datasets_path='datasets/'):
+    if presentation:
+        return pd.read_parquet(datasets_path + 'dataset.parquet')
+    
+    else:
+        datasets_path += 'raw/'
+    
     # Geography
-    ibge_dataset = get_ibge_dataset(raw_datasets_path)
+    ibge_dataset = get_ibge_dataset(datasets_path)
     
     # Internet access
     internet_connection_dataset = get_internet_dataset(
-        raw_datasets_path,
+        datasets_path,
         ibge_dataset
     )
     
     # Education
-    education_dataset = get_education_dataset(raw_datasets_path)
+    education_dataset = get_education_dataset(datasets_path)
     
     # Social
-    social_dataset = get_social_dataset(raw_datasets_path)
+    social_dataset = get_social_dataset(datasets_path)
 
     df = education_dataset.merge(ibge_dataset.drop(columns=['cod_ap', 'cod_setor']).drop_duplicates(), on='cod_mun', how='inner')\
                           .merge(social_dataset, on=['nom_mun', 'sig_uf'], how='inner')\
