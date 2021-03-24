@@ -150,7 +150,7 @@ def _get_multivariate_regression_models(df, model, education_level):
         missing='drop'
     ).fit()
 
-    ideb_model_endog = df['ideb_ef_' + education_level]
+    ideb_model_endog = df['ideb_' + education_level]
     ideb_model = sm.OLS(
         endog=ideb_model_endog,
         exog=exog,
@@ -246,7 +246,7 @@ def get_forecast_plot(df_train, df_validation, education_level):
     plt.show()
 
 def _get_forecast_analysis(df_train, df_validation, education_level):
-    df_validation = _get_multivariate_regression_columns(
+    df_validation_ = _get_multivariate_regression_columns(
         df=df_validation,
         model='dual_speed_ranges'
     )
@@ -257,7 +257,7 @@ def _get_forecast_analysis(df_train, df_validation, education_level):
         education_level=education_level
     )[0]
 
-    y_pred = approval_model.predict(df_validation)
+    y_pred = approval_model.predict(df_validation_)
     y_real = df_validation['tx_aprov_' + education_level][df_validation.index]
 
     return y_pred, y_real
