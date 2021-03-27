@@ -239,12 +239,13 @@ def get_forecast_plot(df_train, df_validation, education_level):
         education_level=education_level
     )
 
+    plt.figure(figsize=(10, 6))
     plt.scatter(y_pred, y_real)
     plt.title(title)
     plt.xlabel('Valor predito')
     plt.ylabel('Valor observado')
-    plt.xlim(75, 100)
-    plt.ylim(60, 100)
+    plt.xlim(50, 100)
+    plt.ylim(50, 100)
     plt.show()
 
 def _get_forecast_analysis(df_train, df_validation, education_level):
